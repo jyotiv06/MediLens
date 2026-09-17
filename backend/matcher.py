@@ -3,6 +3,7 @@ import pandas as pd
 from rapidfuzz import process, fuzz
 from normalizer import normalize_brand, normalize_salt
 from verifier import MedicineVerifier
+from analyzer import evaluate_match_confidence, calculate_pricing_and_savings
 
 PROCESSED_FILE = "../data/processed/medicines_processed.csv"
 
@@ -13,55 +14,81 @@ class MedicineMatcher:
         else:
             self.df = pd.DataFrame(columns=['id', 'brandName', 'salt', 'strength', 'dosageForm', 'price'])
 
-    def search_and_verify(self, query_salt: str, query_strength: str, query_form: str, brand_query: str = None, limit: int = 10):
+    def full_search_pipeline(self, query_brand: str, query_salt: str, query_strength: str, query_form: str):
         """
-        Performs fuzzy/normalized retrieval and then runs deterministic verification 
-        across ALL candidates to filter out mismatches (e.g., wrong strength).
+        Executes the complete production pipeline for any searched medicine:
+        1. Candidate Retrieval & Verification
+        2. Confidence Scoring & Abstention Logic
+        3. Price Comparison & Potential Savings Calculation
         """
         if self.df.empty:
-            return {"match_type": "none", "verified_candidates": []}
+            return {"error": "Dataset is empty."}
 
-        # 1. Retrieve candidates (using fuzzy matching on brand name or filtering by salt)
         candidates = self.df.to_dict(orient="records")
-        
-        verified_results = []
+        results = []
+
         for cand in candidates:
-            # Run deterministic verification on EVERY candidate
+            # 1. Fuzzy match score on brand name
+            fuzzy_score = fuzz.WRatio(query_brand, cand['brandName'])
+            
+            # Skip low-relevance candidates early to save processing
+            if fuzzy_score < 40:
+                continue
+
+            # 2. Deterministic Verification
             verification = MedicineVerifier.verify_candidate(
                 input_salt=query_salt,
                 input_strength=query_strength,
                 input_form=query_form,
                 candidate=cand
             )
-            
-            # Keep track of check results for all candidates
-            cand_copy = cand.copy()
-            cand_copy["verification"] = verification
-            verified_results.append(cand_copy)
 
-        # 2. Filter for those that passed deterministic verification
-        passed_candidates = [c for c in verified_results if c["verification"]["status"] == "PASS"]
+            # 3. Confidence Evaluation & Abstention Rule
+            confidence_eval = evaluate_match_confidence(verification["checks"], fuzzy_score)
+
+            # 4. Pricing & Savings (Assuming a baseline branded price for comparison, e.g., 100.0)
+            # In production, this compares the scanned brand price vs alternative price
+            baseline_branded_price = 100.0 
+            pricing = calculate_pricing_and_savings(baseline_branded_price, cand['price'])
+
+            results.append({
+                "brandName": cand['brandName'],
+                "salt": cand['salt'],
+                "strength": cand['strength'],
+                "dosageForm": cand['dosageForm'],
+                "price": cand['price'],
+                "verification": verification,
+                "confidence": confidence_eval,
+                "pricing": pricing
+            })
+
+        # Filter only those that passed HIGH confidence (abstaining from low confidence guesses)
+        actionable_results = [r for r in results if r["confidence"]["action"] == "SHOW_RESULT"]
 
         return {
-            "query": {"salt": query_salt, "strength": query_strength, "dosageForm": query_form},
-            "total_evaluated": len(candidates),
-            "total_passed": len(passed_candidates),
-            "verified_candidates": passed_candidates
+            "query": {"brand": query_brand, "salt": query_salt, "strength": query_strength, "dosageForm": query_form},
+            "total_candidates_evaluated": len(results),
+            "actionable_matches_count": len(actionable_results),
+            "matches": actionable_results[:5] # Return top 5 actionable matches
         }
 
 if __name__ == "__main__":
     matcher = MedicineMatcher()
-    print("Running verification across all 11,501 medicines for: Paracetamol 650 mg Tablet")
+    print("Running full production pipeline across all 11,501 medicines for: 'Dolo 650'")
     
-    # Test query input
-    result = matcher.search_and_verify(
-        query_salt="Paracetamol", 
-        query_strength="650 mg", 
+    output = matcher.full_search_pipeline(
+        query_brand="Dolo 650",
+        query_salt="Paracetamol",
+        query_strength="650 mg",
         query_form="Tablet"
     )
     
-    print(f"Total Evaluated: {result['total_evaluated']}")
-    print(f"Total Passed (Exact Match on Salt, Strength & Form): {result['total_passed']}")
-    print("Sample Passed Candidates:")
-    for cand in result['verified_candidates'][:3]:
-        print(f"- {cand['brandName']} | Strength: {cand['strength']} | Status: {cand['verification']['status']}")
+    print(f"Total Evaluated Candidates: {output['total_candidates_evaluated']}")
+    print(f"Actionable High-Confidence Matches: {output['actionable_matches_count']}")
+    if output['matches']:
+        print("\nTop Match Example:")
+        top = output['matches'][0]
+        print(f"- Brand: {top['brandName']}")
+        print(f"- Confidence: {top['confidence']['confidenceScore']} ({top['confidence']['confidenceLevel']})")
+        print(f"- Action: {top['confidence']['action']}")
+        print(f"- Savings vs Baseline: {top['pricing']['potentialSavings']}%")
