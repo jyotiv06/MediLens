@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Environment variables
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Data directories (keep structure, ignore large raw/processed files if needed)
+data/processed/*
+!data/processed/.gitkeep
