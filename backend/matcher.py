@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from rapidfuzz import process, fuzz
 from normalizer import normalize_brand, normalize_salt
+from verifier import MedicineVerifier
 
 PROCESSED_FILE = "../data/processed/medicines_processed.csv"
 
@@ -12,59 +13,55 @@ class MedicineMatcher:
         else:
             self.df = pd.DataFrame(columns=['id', 'brandName', 'salt', 'strength', 'dosageForm', 'price'])
 
-    def search(self, query: str, limit: int = 5):
+    def search_and_verify(self, query_salt: str, query_strength: str, query_form: str, brand_query: str = None, limit: int = 10):
         """
-        Tiered search pipeline:
-        1. Exact match
-        2. Normalized match
-        3. Fuzzy candidate retrieval
+        Performs fuzzy/normalized retrieval and then runs deterministic verification 
+        across ALL candidates to filter out mismatches (e.g., wrong strength).
         """
         if self.df.empty:
-            return {"match_type": "none", "candidates": []}
+            return {"match_type": "none", "verified_candidates": []}
 
-        query_clean = query.strip()
+        # 1. Retrieve candidates (using fuzzy matching on brand name or filtering by salt)
+        candidates = self.df.to_dict(orient="records")
+        
+        verified_results = []
+        for cand in candidates:
+            # Run deterministic verification on EVERY candidate
+            verification = MedicineVerifier.verify_candidate(
+                input_salt=query_salt,
+                input_strength=query_strength,
+                input_form=query_form,
+                candidate=cand
+            )
+            
+            # Keep track of check results for all candidates
+            cand_copy = cand.copy()
+            cand_copy["verification"] = verification
+            verified_results.append(cand_copy)
 
-        # 1. Exact Match (case-insensitive)
-        exact_matches = self.df[self.df['brandName'].str.lower() == query_clean.lower()]
-        if not exact_matches.empty:
-            return {
-                "match_type": "exact",
-                "query": query,
-                "candidates": exact_matches.to_dict(orient="records")
-            }
-
-        # 2. Normalized Match
-        norm_query = normalize_brand(query_clean)
-        norm_matches = self.df[self.df['brandName'].apply(normalize_brand) == norm_query]
-        if not norm_matches.empty:
-            return {
-                "match_type": "normalized",
-                "query": query,
-                "candidates": norm_matches.to_dict(orient="records")
-            }
-
-        # 3. Fuzzy Candidate Retrieval
-        # Note: Fuzzy matching only finds candidates. It does not declare medical equivalence.
-        brand_choices = self.df['brandName'].tolist()
-        fuzzy_results = process.extract(
-            query_clean, 
-            brand_choices, 
-            scorer=fuzz.WRatio, 
-            limit=limit
-        )
-
-        matched_indices = [res[2] for res in fuzzy_results if res[1] > 60] # threshold score > 60
-        candidates = self.df.iloc[matched_indices].to_dict(orient="records")
+        # 2. Filter for those that passed deterministic verification
+        passed_candidates = [c for c in verified_results if c["verification"]["status"] == "PASS"]
 
         return {
-            "match_type": "fuzzy_candidates",
-            "query": query,
-            "disclaimer": "Fuzzy matching only finds candidates. It does not declare medical equivalence.",
-            "candidates": candidates
+            "query": {"salt": query_salt, "strength": query_strength, "dosageForm": query_form},
+            "total_evaluated": len(candidates),
+            "total_passed": len(passed_candidates),
+            "verified_candidates": passed_candidates
         }
 
 if __name__ == "__main__":
     matcher = MedicineMatcher()
-    print("Testing matcher with typo query: 'Paracetmol 650'")
-    result = matcher.search("Paracetmol 650")
-    print(result)
+    print("Running verification across all 11,501 medicines for: Paracetamol 650 mg Tablet")
+    
+    # Test query input
+    result = matcher.search_and_verify(
+        query_salt="Paracetamol", 
+        query_strength="650 mg", 
+        query_form="Tablet"
+    )
+    
+    print(f"Total Evaluated: {result['total_evaluated']}")
+    print(f"Total Passed (Exact Match on Salt, Strength & Form): {result['total_passed']}")
+    print("Sample Passed Candidates:")
+    for cand in result['verified_candidates'][:3]:
+        print(f"- {cand['brandName']} | Strength: {cand['strength']} | Status: {cand['verification']['status']}")
