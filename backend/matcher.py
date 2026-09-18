@@ -5,8 +5,6 @@ from verifier import MedicineVerifier
 from analyzer import evaluate_match_confidence, calculate_pricing_and_savings
 from rapidfuzz import fuzz
 
-# Resolve relative to this file, not the current working directory, so `uvicorn`
-# doesn't break depending on which folder it's launched from.
 DEFAULT_DATASET_PATH = os.path.join(
     os.path.dirname(__file__), "..", "data", "processed", "medicines_processed.csv"
 )
@@ -19,7 +17,7 @@ class MedicineMatcher:
         self.df['clean_form'] = self.df['dosageForm'].astype(str).apply(normalize_dosage_form)
 
     def full_search_pipeline(self, query_brand: str, query_salt: str, query_strength: str,
-                              query_form: str, exclude_id: str = None):
+                              query_form: str, exclude_id: str = None, queried_price: float = 100.0):
         norm_query_form = str(normalize_dosage_form(query_form)).lower()
 
         # Filter candidates by matching dosage form and strict salt matching
@@ -39,7 +37,6 @@ class MedicineMatcher:
 
         total_evaluated = len(candidates)
         actionable_matches = []
-        baseline_price = candidates['price'].median() if not candidates.empty else 100.0
 
         for _, cand in candidates.iterrows():
             cand_dict = {
@@ -51,7 +48,6 @@ class MedicineMatcher:
                 "price": float(cand.get('price', 10.0))
             }
 
-            # Call verifier matching verifier.py signature: verify_candidate(input_salt, input_strength, input_form, candidate)
             verification = MedicineVerifier.verify_candidate(
                 query_salt,
                 query_strength,
@@ -60,15 +56,13 @@ class MedicineMatcher:
             )
 
             if isinstance(verification, dict) and verification.get("status") == "PASS":
-                # Compute fuzzy score between query brand and candidate brand name
                 fuzz_score = float(fuzz.ratio(query_brand.lower(), str(cand_dict['brandName']).lower()))
-
-                # Call analyzer matching analyzer.py signature: evaluate_match_confidence(verification_checks, fuzzy_score)
                 confidence = evaluate_match_confidence(verification.get("checks", {}), fuzz_score)
 
                 if confidence.get("action") == "SHOW_RESULT":
                     alt_price = cand_dict["price"]
-                    pricing = calculate_pricing_and_savings(baseline_price, alt_price)
+                    # Calculate pricing & savings directly against the exact queried medicine price
+                    pricing = calculate_pricing_and_savings(queried_price, alt_price)
 
                     actionable_matches.append({
                         "brandName": cand_dict["brandName"],

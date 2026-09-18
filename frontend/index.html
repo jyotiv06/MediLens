@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediLens — Pharmaceutical Transparency & Savings Engine</title>
+    <title>MediLens — Medicine Identity & Savings Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -13,13 +13,13 @@
         <!-- Header -->
         <div class="text-center mb-6">
             <h1 class="text-4xl brand-title tracking-tight">MEDILENS</h1>
-            <p class="text-sm text-slate-500 font-medium mt-1">Discover chemically equivalent alternatives and transparent retail pricing.</p>
+            <p class="text-sm text-slate-500 font-medium mt-1">Verify medicine identity, compare suitable alternatives, and estimate potential savings.</p>
         </div>
 
         <!-- Mode Toggle Tabs -->
         <div class="flex rounded-xl bg-slate-100 p-1 mb-6">
             <button onclick="switchMode('single')" id="tabSingle" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white text-blue-600 shadow-sm transition">Single Search</button>
-            <button onclick="switchMode('basket')" id="tabBasket" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition">Prescription Basket ⭐</button>
+            <button onclick="switchMode('basket')" id="tabBasket" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition">Basket ⭐</button>
         </div>
 
         <!-- ================= SINGLE SEARCH VIEW ================= -->
@@ -78,8 +78,11 @@
 
         <!-- ================= PRESCRIPTION BASKET VIEW ================= -->
         <div id="viewBasket" class="hidden space-y-4">
+            <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                Add medicines from your prescription manually. MediLens verifies the active ingredient, strength and dosage form before showing alternatives.
+            </p>
             <div class="flex gap-2">
-                <input id="basketQuery" type="text" placeholder="Add medicine to basket (e.g. Dolo, Crocin, Omez)"
+                <input id="basketQuery" type="text" placeholder="Add prescribed medicine (e.g. Dolo, Crocin, Omez)"
                     class="search-input flex-1 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 text-sm font-medium">
                 <button onclick="addToBasket()"
                     class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 text-sm">
@@ -89,7 +92,7 @@
 
             <!-- Basket Items List -->
             <div id="basketItems" class="space-y-2 max-h-56 overflow-y-auto pr-1">
-                <p class="text-xs text-slate-400 text-center py-6">Your prescription basket is empty. Add medicines above.</p>
+                <p class="text-xs text-slate-400 text-center py-6">Your prescription basket is empty. Search and add prescribed medicines above.</p>
             </div>
 
             <!-- Basket Summary Totals -->
@@ -131,19 +134,25 @@
         let prescriptionBasket = [];
 
         function switchMode(mode) {
+            ['Single', 'Basket'].forEach(m => {
+                document.getElementById(`view${m}`).classList.add('hidden');
+                document.getElementById(`tab${m}`).className =
+                    "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition";
+            });
+
             if (mode === 'single') {
                 document.getElementById('viewSingle').classList.remove('hidden');
-                document.getElementById('viewBasket').classList.add('hidden');
-                document.getElementById('tabSingle').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-white text-blue-600 shadow-sm transition";
-                document.getElementById('tabBasket').className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition";
+                document.getElementById('tabSingle').className =
+                    "flex-1 py-2 text-xs font-bold rounded-lg bg-white text-blue-600 shadow-sm transition";
             } else {
-                document.getElementById('viewSingle').classList.add('hidden');
                 document.getElementById('viewBasket').classList.remove('hidden');
-                document.getElementById('tabBasket').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-white text-emerald-600 shadow-sm transition";
-                document.getElementById('tabSingle').className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition";
+                document.getElementById('tabBasket').className =
+                    "flex-1 py-2 text-xs font-bold rounded-lg bg-white text-emerald-600 shadow-sm transition";
             }
+
             document.getElementById('errorContainer').classList.add('hidden');
         }
+
 
         async function searchMedicine() {
             const query = document.getElementById('searchQuery').value.trim();
@@ -231,7 +240,7 @@
             const summary = document.getElementById('basketSummary');
 
             if (prescriptionBasket.length === 0) {
-                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Your prescription basket is empty. Add medicines above.</p>`;
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Your prescription basket is empty. Search and add prescribed medicines above.</p>`;
                 summary.classList.add('hidden');
                 return;
             }
