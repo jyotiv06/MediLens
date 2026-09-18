@@ -11,92 +11,143 @@
     <div class="medilens-card">
 
         <!-- Header -->
-        <div class="text-center mb-8">
+        <div class="text-center mb-6">
             <h1 class="text-4xl brand-title tracking-tight">MEDILENS</h1>
-            <p class="text-sm text-slate-500 font-medium mt-1">Discover chemically equivalent alternatives and transparent retail pricing for prescribed medicines.</p>
+            <p class="text-sm text-slate-500 font-medium mt-1">Discover chemically equivalent alternatives and transparent retail pricing.</p>
         </div>
 
-        <!-- Search Bar -->
-        <div class="flex gap-2 mb-6">
-            <input id="searchQuery" type="text" placeholder="Enter medicine brand (e.g., Crocin, Dolo, Pantop)"
-                class="search-input flex-1 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 text-sm font-medium">
-            <button onclick="searchMedicine()"
-                class="bg-blue-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/20">
-                🔍
-            </button>
+        <!-- Mode Toggle Tabs -->
+        <div class="flex rounded-xl bg-slate-100 p-1 mb-6">
+            <button onclick="switchMode('single')" id="tabSingle" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white text-blue-600 shadow-sm transition">Single Search</button>
+            <button onclick="switchMode('basket')" id="tabBasket" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition">Prescription Basket ⭐</button>
         </div>
 
-        <!-- Results Container -->
-        <div id="resultContainer" class="hidden space-y-6">
-
-            <!-- Medicine Header -->
-            <div class="border-b border-slate-100 pb-4">
-                <h2 id="resBrandName" class="text-2xl font-bold text-slate-900"></h2>
-                <div class="mt-3 space-y-1.5 text-sm">
-                    <p class="text-slate-600"><span class="font-semibold text-slate-700">Active ingredient:</span> <span id="resSalt" class="text-slate-900"></span></p>
-                    <p class="text-slate-600"><span class="font-semibold text-slate-700">Strength:</span> <span id="resStrength" class="text-slate-900"></span></p>
-                    <p class="text-slate-600"><span class="font-semibold text-slate-700">Form:</span> <span id="resForm" class="text-slate-900"></span></p>
-                </div>
-            </div>
-
-            <!-- Side by Side Pricing Card -->
-            <div class="grid grid-cols-2 gap-4 p-4 rounded-xl pricing-box text-center">
-                <div>
-                    <p class="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Queried Price</p>
-                    <p id="resBrandedPrice" class="text-xl font-extrabold text-slate-700 mt-1">₹0.00</p>
-                </div>
-                <div>
-                    <p class="text-[11px] text-emerald-600 uppercase tracking-wider font-bold">Best Alternative</p>
-                    <p id="resAltPrice" class="text-xl font-extrabold text-emerald-600 mt-1">₹0.00</p>
-                </div>
-            </div>
-
-            <!-- Best Alternative details -->
-            <div class="text-sm text-slate-500 text-center -mt-2">
-                Alternative: <span id="resAltBrand" class="font-semibold text-slate-700"></span>
-            </div>
-
-            <!-- Savings & Confidence Stats -->
-            <div class="space-y-2.5 text-sm p-4 rounded-xl stat-box">
-                <div class="flex justify-between">
-                    <span class="text-slate-600 font-medium">Potential difference:</span>
-                    <span id="resDiff" class="font-bold text-slate-800">₹0.00</span>
-                </div>
-                <div class="flex justify-between">
-                    <span class="text-slate-600 font-medium">Potential savings:</span>
-                    <span id="resSavings" class="font-bold text-emerald-600">0%</span>
-                </div>
-                <div class="flex justify-between border-t border-blue-200/60 pt-2.5 mt-2.5">
-                    <span class="text-slate-600 font-medium">Match confidence:</span>
-                    <span id="resConfidence" class="font-bold text-blue-600">0%</span>
-                </div>
-            </div>
-
-            <!-- Medical Disclaimer -->
-            <p class="text-[11px] text-slate-400 text-center leading-relaxed italic">
-                Disclaimer: For educational transparency only. Always consult a licensed medical practitioner before changing prescribed medicines.
-            </p>
-
-        </div>
-
-        <!-- Error / Empty / Ambiguous State -->
-        <div id="errorContainer" class="hidden text-center py-6 text-rose-500 text-sm font-semibold bg-rose-50 rounded-xl border border-rose-100 px-4">
-            <span id="errorMessage">We couldn't find this medicine. Please check the spelling or try a different brand name.</span>
-            <div id="suggestionAction" class="mt-3 hidden">
-                <button id="suggestionBtn"
-                    class="bg-white border border-rose-300 text-rose-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-rose-100 transition">
+        <!-- ================= SINGLE SEARCH VIEW ================= -->
+        <div id="viewSingle">
+            <div class="flex gap-2 mb-6">
+                <input id="searchQuery" type="text" placeholder="Enter medicine brand (e.g., Crocin, Dolo, Omez)"
+                    class="search-input flex-1 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 text-sm font-medium">
+                <button onclick="searchMedicine()"
+                    class="bg-blue-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/20">
+                    🔍
                 </button>
             </div>
+
+            <!-- Results Container -->
+            <div id="resultContainer" class="hidden space-y-6">
+                <div class="border-b border-slate-100 pb-4">
+                    <h2 id="resBrandName" class="text-2xl font-bold text-slate-900"></h2>
+                    <div class="mt-3 space-y-1.5 text-sm">
+                        <p class="text-slate-600"><span class="font-semibold text-slate-700">Active ingredient:</span> <span id="resSalt" class="text-slate-900"></span></p>
+                        <p class="text-slate-600"><span class="font-semibold text-slate-700">Strength:</span> <span id="resStrength" class="text-slate-900"></span></p>
+                        <p class="text-slate-600"><span class="font-semibold text-slate-700">Form:</span> <span id="resForm" class="text-slate-900"></span></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 p-4 rounded-xl pricing-box text-center">
+                    <div>
+                        <p class="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Queried Price</p>
+                        <p id="resBrandedPrice" class="text-xl font-extrabold text-slate-700 mt-1">₹0.00</p>
+                    </div>
+                    <div>
+                        <p class="text-[11px] text-emerald-600 uppercase tracking-wider font-bold">Best Alternative</p>
+                        <p id="resAltPrice" class="text-xl font-extrabold text-emerald-600 mt-1">₹0.00</p>
+                    </div>
+                </div>
+
+                <div class="text-sm text-slate-500 text-center -mt-2">
+                    Alternative: <span id="resAltBrand" class="font-semibold text-slate-700"></span>
+                </div>
+
+                <div class="space-y-2.5 text-sm p-4 rounded-xl stat-box">
+                    <div class="flex justify-between">
+                        <span class="text-slate-600 font-medium">Potential difference:</span>
+                        <span id="resDiff" class="font-bold text-slate-800">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-600 font-medium">Potential savings:</span>
+                        <span id="resSavings" class="font-bold text-emerald-600">0%</span>
+                    </div>
+                    <div class="flex justify-between border-t border-blue-200/60 pt-2.5 mt-2.5">
+                        <span class="text-slate-600 font-medium">Match confidence:</span>
+                        <span id="resConfidence" class="font-bold text-blue-600">0%</span>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- ================= PRESCRIPTION BASKET VIEW ================= -->
+        <div id="viewBasket" class="hidden space-y-4">
+            <div class="flex gap-2">
+                <input id="basketQuery" type="text" placeholder="Add medicine to basket (e.g. Dolo, Crocin, Omez)"
+                    class="search-input flex-1 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 text-sm font-medium">
+                <button onclick="addToBasket()"
+                    class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 text-sm">
+                    + Add
+                </button>
+            </div>
+
+            <!-- Basket Items List -->
+            <div id="basketItems" class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                <p class="text-xs text-slate-400 text-center py-6">Your prescription basket is empty. Add medicines above.</p>
+            </div>
+
+            <!-- Basket Summary Totals -->
+            <div id="basketSummary" class="hidden border-t border-slate-200 pt-4 space-y-3">
+                <div class="space-y-2 text-sm p-4 rounded-xl stat-box">
+                    <div class="flex justify-between text-slate-600">
+                        <span>Original total:</span>
+                        <span id="basketOrigTotal" class="font-bold text-slate-800">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600">
+                        <span>Alternative total:</span>
+                        <span id="basketAltTotal" class="font-bold text-emerald-600">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between border-t border-blue-200/60 pt-2 mt-1">
+                        <span class="font-semibold text-slate-700">Potential difference:</span>
+                        <span id="basketDiffTotal" class="font-bold text-slate-900">₹0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-slate-700">Potential savings:</span>
+                        <span id="basketSavingsPct" class="font-bold text-emerald-600">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error / Notification Box -->
+        <div id="errorContainer" class="hidden mt-4 text-center py-4 text-rose-500 text-xs font-semibold bg-rose-50 rounded-xl border border-rose-100 px-4">
+            <span id="errorMessage"></span>
+        </div>
+
+        <!-- Medical Disclaimer -->
+        <p class="text-[11px] text-slate-400 text-center leading-relaxed italic mt-6">
+            Disclaimer: For educational transparency only. Always consult a licensed medical practitioner before changing prescribed medicines.
+        </p>
 
     </div>
 
     <script>
-        async function searchMedicine(overrideQuery) {
-            const query = overrideQuery || document.getElementById('searchQuery').value.trim();
-            if (!query) return;
+        let prescriptionBasket = [];
 
-            document.getElementById('suggestionAction').classList.add('hidden');
+        function switchMode(mode) {
+            if (mode === 'single') {
+                document.getElementById('viewSingle').classList.remove('hidden');
+                document.getElementById('viewBasket').classList.add('hidden');
+                document.getElementById('tabSingle').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-white text-blue-600 shadow-sm transition";
+                document.getElementById('tabBasket').className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition";
+            } else {
+                document.getElementById('viewSingle').classList.add('hidden');
+                document.getElementById('viewBasket').classList.remove('hidden');
+                document.getElementById('tabBasket').className = "flex-1 py-2 text-xs font-bold rounded-lg bg-white text-emerald-600 shadow-sm transition";
+                document.getElementById('tabSingle').className = "flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition";
+            }
+            document.getElementById('errorContainer').classList.add('hidden');
+        }
+
+        async function searchMedicine() {
+            const query = document.getElementById('searchQuery').value.trim();
+            if (!query) return;
 
             try {
                 const response = await fetch('http://127.0.0.1:8000/api/search', {
@@ -106,43 +157,24 @@
                 });
 
                 if (!response.ok) {
-                    const errData = await response.json().catch(() => ({}));
-
-                    if (response.status === 300 && errData.detail && errData.detail.suggestion) {
-                        // Ambiguous / low-confidence match — ask, don't guess.
-                        const suggestion = errData.detail.suggestion;
-                        document.getElementById('errorMessage').innerText =
-                            `We couldn't find "${query}" exactly. Did you mean this?`;
-                        const btn = document.getElementById('suggestionBtn');
-                        btn.innerText = suggestion;
-                        btn.onclick = () => {
-                            document.getElementById('searchQuery').value = suggestion;
-                            searchMedicine(suggestion);
-                        };
-                        document.getElementById('suggestionAction').classList.remove('hidden');
-                    } else {
-                        document.getElementById('errorMessage').innerText = errData.detail || "Medicine not found in database.";
-                    }
-
+                    const err = await response.json().catch(() => ({}));
+                    showError(err.detail || "Medicine not found.");
                     document.getElementById('resultContainer').classList.add('hidden');
-                    document.getElementById('errorContainer').classList.remove('hidden');
                     return;
                 }
 
                 const data = await response.json();
-
                 if (data.matches && data.matches.length > 0) {
                     const top = data.matches[0];
-                    const baseDetails = data.queriedBrandDetails || {};
+                    const base = data.queriedBrandDetails || {};
 
-                    document.getElementById('resBrandName').innerText = baseDetails.name || query;
-                    document.getElementById('resSalt').innerText = baseDetails.salt;
-                    document.getElementById('resStrength').innerText = baseDetails.strength;
-                    document.getElementById('resForm').innerText = baseDetails.dosageForm;
-
+                    document.getElementById('resBrandName').innerText = base.name || query;
+                    document.getElementById('resSalt').innerText = base.salt;
+                    document.getElementById('resStrength').innerText = base.strength;
+                    document.getElementById('resForm').innerText = base.dosageForm;
                     document.getElementById('resAltBrand').innerText = top.brandName;
 
-                    document.getElementById('resBrandedPrice').innerText = `₹${(baseDetails.price || 100).toFixed(2)}`;
+                    document.getElementById('resBrandedPrice').innerText = `₹${(base.price || 100).toFixed(2)}`;
                     document.getElementById('resAltPrice').innerText = `₹${top.price.toFixed(2)}`;
                     document.getElementById('resDiff').innerText = `₹${top.pricing.potentialDifference.toFixed(2)}`;
                     document.getElementById('resSavings').innerText = `${top.pricing.potentialSavings}%`;
@@ -150,17 +182,105 @@
 
                     document.getElementById('resultContainer').classList.remove('hidden');
                     document.getElementById('errorContainer').classList.add('hidden');
-                } else {
-                    document.getElementById('errorMessage').innerText = "We found this medicine, but no verified cheaper alternative right now.";
-                    document.getElementById('resultContainer').classList.add('hidden');
-                    document.getElementById('errorContainer').classList.remove('hidden');
                 }
             } catch (err) {
-                console.error(err);
-                document.getElementById('errorMessage').innerText = "Something went wrong. Please make sure the app is running and try again.";
-                document.getElementById('resultContainer').classList.add('hidden');
-                document.getElementById('errorContainer').classList.remove('hidden');
+                showError("Connection error. Ensure FastAPI is running on port 8000.");
             }
+        }
+
+        async function addToBasket() {
+            const query = document.getElementById('basketQuery').value.trim();
+            if (!query) return;
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ brand_name: query })
+                });
+
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    showError(err.detail || `Could not find "${query}" for basket.`);
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.matches && data.matches.length > 0) {
+                    const top = data.matches[0];
+                    const base = data.queriedBrandDetails || {};
+
+                    prescriptionBasket.push({
+                        name: base.name || query,
+                        origPrice: base.price || 100.0,
+                        altPrice: top.price,
+                        altName: top.brandName
+                    });
+
+                    document.getElementById('basketQuery').value = "";
+                    document.getElementById('errorContainer').classList.add('hidden');
+                    renderBasket();
+                }
+            } catch (err) {
+                showError("Connection error while adding to basket.");
+            }
+        }
+
+        function renderBasket() {
+            const container = document.getElementById('basketItems');
+            const summary = document.getElementById('basketSummary');
+
+            if (prescriptionBasket.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Your prescription basket is empty. Add medicines above.</p>`;
+                summary.classList.add('hidden');
+                return;
+            }
+
+            let html = '';
+            let origTotal = 0;
+            let altTotal = 0;
+
+            prescriptionBasket.forEach((item, index) => {
+                origTotal += item.origPrice;
+                altTotal += item.altPrice;
+                html += `
+                    <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs">
+                        <div>
+                            <span class="font-bold text-slate-800">${item.name}</span>
+                            <span class="text-slate-400 block">Alt: ${item.altName}</span>
+                        </div>
+                        <div class="text-right flex items-center gap-3">
+                            <div>
+                                <span class="font-semibold text-slate-600">₹${item.origPrice.toFixed(2)}</span>
+                                <span class="text-emerald-600 font-bold block">→ ₹${item.altPrice.toFixed(2)}</span>
+                            </div>
+                            <button onclick="removeFromBasket(${index})" class="text-rose-400 hover:text-rose-600 font-bold px-1">✕</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+
+            const diff = origTotal - altTotal;
+            const savingsPct = origTotal > 0 ? ((diff / origTotal) * 100).toFixed(1) : 0;
+
+            document.getElementById('basketOrigTotal').innerText = `₹${origTotal.toFixed(2)}`;
+            document.getElementById('basketAltTotal').innerText = `₹${altTotal.toFixed(2)}`;
+            document.getElementById('basketDiffTotal').innerText = `₹${diff.toFixed(2)}`;
+            document.getElementById('basketSavingsPct').innerText = `${savingsPct}%`;
+
+            summary.classList.remove('hidden');
+        }
+
+        function removeFromBasket(index) {
+            prescriptionBasket.splice(index, 1);
+            renderBasket();
+        }
+
+        function showError(msg) {
+            document.getElementById('errorMessage').innerText = msg;
+            document.getElementById('errorContainer').classList.remove('hidden');
         }
     </script>
 </body>
