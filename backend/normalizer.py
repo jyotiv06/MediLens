@@ -35,7 +35,29 @@ def normalize_dosage_form(form: str) -> str:
 def normalize_salt(salt: str) -> str:
     if not isinstance(salt, str):
         return ""
+    # Strip parenthetical strength annotations, e.g. "Paracetamol (500mg)" -> "Paracetamol".
+    # Strength is verified separately (normalize_strength) — keeping it inside the salt
+    # string caused tiny formatting drift ("500Mg" vs "500 Mg") to break exact-match
+    # filtering and silently push rows into the unsafe fuzzy fallback path.
+    cleaned = re.sub(r'\([^)]*\)', '', salt)
     # Clean and sort ingredients alphabetically for consistent matching (e.g., A + B == B + A)
-    parts = [p.strip().title() for p in salt.split('+')]
+    parts = [p.strip().title() for p in cleaned.split('+') if p.strip()]
     parts.sort()
     return ' + '.join(parts)
+
+# --- Derive dosage form from the raw medicine name ---
+# Fixes process_data.py hardcoding every row to "Tablet", which silently broke
+# form-based verification for syrups, injections, capsules, etc.
+FORM_KEYWORDS = [
+    'tablet', 'capsule', 'syrup', 'suspension', 'injection',
+    'cream', 'ointment', 'drop', 'gel', 'spray', 'lotion'
+]
+
+def extract_form_from_name(name: str) -> str:
+    if not isinstance(name, str):
+        return "Tablet"
+    name_lower = name.lower()
+    for kw in FORM_KEYWORDS:
+        if kw in name_lower:
+            return normalize_dosage_form(kw)
+    return "Tablet"  # sane default when no form keyword is present in the name

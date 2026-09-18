@@ -12,15 +12,20 @@ class MedicineVerifier:
         norm_input_strength = normalize_strength(input_strength)
         norm_input_form = normalize_dosage_form(input_form)
 
-        # Check if candidate salt string already embeds the strength (common in scrapers)
         cand_salt_normalized = normalize_salt(cand_salt_raw)
-        
-        # Salt match: check if base names match
-        salt_match = norm_input_salt.lower() in cand_salt_normalized.lower() and bool(norm_input_salt)
-        
+
+        # Salt match: EXACT equality of the full active-ingredient set.
+        # This must never be a substring/containment check — "Paracetamol" is a
+        # substring of "Domperidone + Paracetamol", but those are different drugs
+        # with a different mechanism and side-effect profile. A containment check
+        # would let a combination drug pass as a "verified" match for a
+        # single-ingredient query, which is exactly the kind of misidentification
+        # the Identity Firewall exists to prevent.
+        salt_match = bool(norm_input_salt) and (norm_input_salt.lower() == cand_salt_normalized.lower())
+
         # Strength match: check if strength is explicitly in candidate strength OR embedded in candidate salt
         strength_match = (
-            norm_input_strength in normalize_strength(cand_strength) or 
+            norm_input_strength in normalize_strength(cand_strength) or
             norm_input_strength.lower() in cand_salt_raw.lower()
         )
 

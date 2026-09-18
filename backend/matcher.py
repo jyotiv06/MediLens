@@ -1,94 +1,97 @@
 import os
 import pandas as pd
-from rapidfuzz import process, fuzz
-from normalizer import normalize_brand, normalize_salt
+from normalizer import normalize_salt, normalize_strength, normalize_dosage_form
 from verifier import MedicineVerifier
 from analyzer import evaluate_match_confidence, calculate_pricing_and_savings
+from rapidfuzz import fuzz
 
-PROCESSED_FILE = "../data/processed/medicines_processed.csv"
+# Resolve relative to this file, not the current working directory, so `uvicorn`
+# doesn't break depending on which folder it's launched from.
+DEFAULT_DATASET_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "data", "processed", "medicines_processed.csv"
+)
 
 class MedicineMatcher:
-    def __init__(self):
-        if os.path.exists(PROCESSED_FILE):
-            self.df = pd.read_csv(PROCESSED_FILE)
-        else:
-            self.df = pd.DataFrame(columns=['id', 'brandName', 'salt', 'strength', 'dosageForm', 'price'])
+    def __init__(self, dataset_path=DEFAULT_DATASET_PATH):
+        self.df = pd.read_csv(dataset_path)
+        self.df['clean_salt'] = self.df['salt'].astype(str).apply(normalize_salt)
+        self.df['clean_strength'] = self.df['strength'].astype(str).apply(normalize_strength)
+        self.df['clean_form'] = self.df['dosageForm'].astype(str).apply(normalize_dosage_form)
 
-    def full_search_pipeline(self, query_brand: str, query_salt: str, query_strength: str, query_form: str):
-        """
-        Executes the complete production pipeline for any searched medicine:
-        1. Candidate Retrieval & Verification
-        2. Confidence Scoring & Abstention Logic
-        3. Price Comparison & Potential Savings Calculation
-        """
-        if self.df.empty:
-            return {"error": "Dataset is empty."}
+    def full_search_pipeline(self, query_brand: str, query_salt: str, query_strength: str,
+                              query_form: str, exclude_id: str = None):
+        norm_query_form = str(normalize_dosage_form(query_form)).lower()
 
-        candidates = self.df.to_dict(orient="records")
-        results = []
+        # Filter candidates by matching dosage form and strict salt matching
+        norm_query_salt = normalize_salt(query_salt)
+        candidates = self.df[
+            (self.df['clean_form'].astype(str).str.lower() == norm_query_form) &
+            (self.df['clean_salt'].str.lower() == norm_query_salt.lower())
+        ]
 
-        for cand in candidates:
-            # 1. Fuzzy match score on brand name
-            fuzzy_score = fuzz.WRatio(query_brand, cand['brandName'])
-            
-            # Skip low-relevance candidates early to save processing
-            if fuzzy_score < 40:
-                continue
+        # Fallback if strict salt match is empty: fall back to all rows of same form
+        if candidates.empty:
+            candidates = self.df[self.df['clean_form'].astype(str).str.lower() == norm_query_form]
 
-            # 2. Deterministic Verification
+        # Never let the queried medicine appear as its own "alternative"
+        if exclude_id is not None:
+            candidates = candidates[candidates['id'] != exclude_id]
+
+        total_evaluated = len(candidates)
+        actionable_matches = []
+        baseline_price = candidates['price'].median() if not candidates.empty else 100.0
+
+        for _, cand in candidates.iterrows():
+            cand_dict = {
+                "id": cand.get('id'),
+                "brandName": cand.get('brandName', 'Unknown'),
+                "salt": cand.get('salt', ''),
+                "strength": cand.get('strength', ''),
+                "dosageForm": cand.get('dosageForm', ''),
+                "price": float(cand.get('price', 10.0))
+            }
+
+            # Call verifier matching verifier.py signature: verify_candidate(input_salt, input_strength, input_form, candidate)
             verification = MedicineVerifier.verify_candidate(
-                input_salt=query_salt,
-                input_strength=query_strength,
-                input_form=query_form,
-                candidate=cand
+                query_salt,
+                query_strength,
+                query_form,
+                cand_dict
             )
 
-            # 3. Confidence Evaluation & Abstention Rule
-            confidence_eval = evaluate_match_confidence(verification["checks"], fuzzy_score)
+            if isinstance(verification, dict) and verification.get("status") == "PASS":
+                # Compute fuzzy score between query brand and candidate brand name
+                fuzz_score = float(fuzz.ratio(query_brand.lower(), str(cand_dict['brandName']).lower()))
 
-            # 4. Pricing & Savings (Assuming a baseline branded price for comparison, e.g., 100.0)
-            # In production, this compares the scanned brand price vs alternative price
-            baseline_branded_price = 100.0 
-            pricing = calculate_pricing_and_savings(baseline_branded_price, cand['price'])
+                # Call analyzer matching analyzer.py signature: evaluate_match_confidence(verification_checks, fuzzy_score)
+                confidence = evaluate_match_confidence(verification.get("checks", {}), fuzz_score)
 
-            results.append({
-                "brandName": cand['brandName'],
-                "salt": cand['salt'],
-                "strength": cand['strength'],
-                "dosageForm": cand['dosageForm'],
-                "price": cand['price'],
-                "verification": verification,
-                "confidence": confidence_eval,
-                "pricing": pricing
-            })
+                if confidence.get("action") == "SHOW_RESULT":
+                    alt_price = cand_dict["price"]
+                    pricing = calculate_pricing_and_savings(baseline_price, alt_price)
 
-        # Filter only those that passed HIGH confidence (abstaining from low confidence guesses)
-        actionable_results = [r for r in results if r["confidence"]["action"] == "SHOW_RESULT"]
+                    actionable_matches.append({
+                        "brandName": cand_dict["brandName"],
+                        "salt": cand_dict["salt"],
+                        "strength": cand_dict["strength"],
+                        "dosageForm": cand_dict["dosageForm"],
+                        "price": alt_price,
+                        "verification": verification,
+                        "confidence": confidence,
+                        "pricing": pricing
+                    })
+
+        # Sort actionable matches by lowest price
+        actionable_matches = sorted(actionable_matches, key=lambda x: x['price'])
 
         return {
-            "query": {"brand": query_brand, "salt": query_salt, "strength": query_strength, "dosageForm": query_form},
-            "total_candidates_evaluated": len(results),
-            "actionable_matches_count": len(actionable_results),
-            "matches": actionable_results[:5] # Return top 5 actionable matches
+            "query": {
+                "brand": query_brand,
+                "salt": query_salt,
+                "strength": query_strength,
+                "dosageForm": query_form
+            },
+            "total_candidates_evaluated": total_evaluated,
+            "actionable_matches_count": len(actionable_matches),
+            "matches": actionable_matches[:5]
         }
-
-if __name__ == "__main__":
-    matcher = MedicineMatcher()
-    print("Running full production pipeline across all 11,501 medicines for: 'Dolo 650'")
-    
-    output = matcher.full_search_pipeline(
-        query_brand="Dolo 650",
-        query_salt="Paracetamol",
-        query_strength="650 mg",
-        query_form="Tablet"
-    )
-    
-    print(f"Total Evaluated Candidates: {output['total_candidates_evaluated']}")
-    print(f"Actionable High-Confidence Matches: {output['actionable_matches_count']}")
-    if output['matches']:
-        print("\nTop Match Example:")
-        top = output['matches'][0]
-        print(f"- Brand: {top['brandName']}")
-        print(f"- Confidence: {top['confidence']['confidenceScore']} ({top['confidence']['confidenceLevel']})")
-        print(f"- Action: {top['confidence']['action']}")
-        print(f"- Savings vs Baseline: {top['pricing']['potentialSavings']}%")
