@@ -3,8 +3,9 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from rapidfuzz import process, fuzz
+from difflib import SequenceMatcher, get_close_matches
 from mangum import Mangum
+import time
 
 from matcher import MedicineMatcher
 
@@ -25,7 +26,7 @@ DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "processed", "
 df = pd.read_csv(DATA_PATH)
 name_col = "brandName"
 
-matcher = MedicineMatcher()
+matcher = MedicineMatcher(dataframe=df)
 
 FUZZY_AUTO_THRESHOLD = 90     
 FUZZY_SUGGEST_THRESHOLD = 60  
@@ -39,6 +40,7 @@ def health_check():
 
 @app.post("/api/search")
 def search_alternatives(payload: SearchRequest):
+    request_start = time.perf_counter()
     query = payload.brand_name.strip()
     query_lower = query.lower()
 
@@ -60,21 +62,38 @@ def search_alternatives(payload: SearchRequest):
         match_row = df[df['salt'].astype(str).str.lower().str.contains(query_lower, na=False)]
 
     if match_row.empty:
-        best_match = process.extractOne(
-            query, df[name_col].astype(str).tolist(), scorer=fuzz.ratio
+        medicine_names = df[name_col].astype(str).tolist()
+
+        best_matches = get_close_matches(
+            query,
+            medicine_names,
+            n=1,
+            cutoff=FUZZY_SUGGEST_THRESHOLD / 100
         )
-        if best_match and best_match[1] >= FUZZY_AUTO_THRESHOLD:
-            match_row = df[df[name_col].astype(str) == best_match[0]]
-        elif best_match and best_match[1] >= FUZZY_SUGGEST_THRESHOLD:
-            raise HTTPException(
-                status_code=300,
-                detail={
-                    "type": "AMBIGUOUS",
-                    "message": f"No exact match for '{query}'.",
-                    "suggestion": best_match[0],
-                    "suggestionScore": round(best_match[1], 1)
-                }
+
+        if best_matches:
+            best_match_name = best_matches[0]
+            best_match_score = (
+                SequenceMatcher(
+                    None,
+                    query.lower(),
+                    best_match_name.lower()
+                ).ratio() * 100
             )
+
+            if best_match_score >= FUZZY_AUTO_THRESHOLD:
+                match_row = df[df[name_col].astype(str) == best_match_name]
+
+            elif best_match_score >= FUZZY_SUGGEST_THRESHOLD:
+                raise HTTPException(
+                    status_code=300,
+                    detail={
+                        "type": "AMBIGUOUS",
+                        "message": f"No exact match for '{query}'.",
+                        "suggestion": best_match_name,
+                        "suggestionScore": round(best_match_score, 1)
+                    }
+                )
 
     if match_row.empty:
         raise HTTPException(status_code=404, detail="We couldn't find this medicine. Please check the spelling or try a different brand name.")
@@ -87,6 +106,7 @@ def search_alternatives(payload: SearchRequest):
     queried_price_val = float(row.get('price', 100.0))
 
     try:
+        pipeline_start = time.perf_counter()
         result = matcher.full_search_pipeline(
             query_brand=brand_name_val,
             query_salt=target_salt,
@@ -95,6 +115,10 @@ def search_alternatives(payload: SearchRequest):
             exclude_id=row.get('id'),
             queried_price=queried_price_val
         )
+        print(
+            f"[TIMING] candidate lookup: "
+            f"{time.perf_counter() - pipeline_start:.3f}s"
+        )
         result['queriedBrandDetails'] = {
             "name": brand_name_val,
             "price": queried_price_val,
@@ -102,6 +126,10 @@ def search_alternatives(payload: SearchRequest):
             "strength": target_strength,
             "dosageForm": target_form
         }
+        print(
+            f"[TIMING] total request: "
+            f"{time.perf_counter() - request_start:.3f}s"
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

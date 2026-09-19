@@ -3,15 +3,19 @@ import pandas as pd
 from normalizer import normalize_salt, normalize_strength, normalize_dosage_form
 from verifier import MedicineVerifier
 from analyzer import evaluate_match_confidence, calculate_pricing_and_savings
-from rapidfuzz import fuzz
+from difflib import SequenceMatcher
 
 DEFAULT_DATASET_PATH = os.path.join(
     os.path.dirname(__file__), "..", "data", "processed", "medicines_processed.csv"
 )
 
 class MedicineMatcher:
-    def __init__(self, dataset_path=DEFAULT_DATASET_PATH):
-        self.df = pd.read_csv(dataset_path)
+    def __init__(self, dataframe=None, dataset_path=DEFAULT_DATASET_PATH):
+        if dataframe is not None:
+            self.df = dataframe.copy()
+        else:
+            self.df = pd.read_csv(dataset_path)
+
         self.df['clean_salt'] = self.df['salt'].astype(str).apply(normalize_salt)
         self.df['clean_strength'] = self.df['strength'].astype(str).apply(normalize_strength)
         self.df['clean_form'] = self.df['dosageForm'].astype(str).apply(normalize_dosage_form)
@@ -56,8 +60,18 @@ class MedicineMatcher:
             )
 
             if isinstance(verification, dict) and verification.get("status") == "PASS":
-                fuzz_score = float(fuzz.ratio(query_brand.lower(), str(cand_dict['brandName']).lower()))
-                confidence = evaluate_match_confidence(verification.get("checks", {}), fuzz_score)
+                fuzz_score = (
+                    SequenceMatcher(
+                        None,
+                        query_brand.lower(),
+                        str(cand_dict['brandName']).lower()
+                    ).ratio() * 100
+                )
+
+                confidence = evaluate_match_confidence(
+                    verification.get("checks", {}),
+                    fuzz_score
+                )
 
                 if confidence.get("action") == "SHOW_RESULT":
                     alt_price = cand_dict["price"]

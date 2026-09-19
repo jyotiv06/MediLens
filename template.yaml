@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: MediLens serverless medicine matching API
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+
+  Api:
+    Cors:
+      AllowOrigin: "'*'"
+      AllowMethods: "'POST, OPTIONS'"
+      AllowHeaders: "'Content-Type'"
+
+Resources:
+
+  MediLensFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: backend.lambda_handler.handler
+      Runtime: python3.11
+
+      Events:
+        SearchAPI:
+          Type: Api
+          Properties:
+            Path: /api/search
+            Method: post
