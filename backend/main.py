@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from rapidfuzz import process, fuzz
+from mangum import Mangum
 
 from matcher import MedicineMatcher
 
@@ -104,3 +105,5 @@ def search_alternatives(payload: SearchRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+handler = Mangum(app)
