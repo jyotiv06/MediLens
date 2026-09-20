@@ -10,109 +10,132 @@
 <body>
     <div class="medilens-card">
 
-        <!-- Header -->
-        <div class="text-center mb-6">
-            <h1 class="text-4xl brand-title tracking-tight">MEDILENS</h1>
-            <p class="text-sm text-slate-500 font-medium mt-1">Verify medicine identity, compare suitable alternatives, and estimate potential savings.</p>
-        </div>
+        <!-- ================= SIDE PANEL ================= -->
+        <aside class="side">
+            <div class="brand-row">
+                <span class="brand-mark" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M21 21l-5.2-5.2"/><path d="M10.5 8v5M8 10.5h5"/></svg>
+                </span>
+                <h1 class="brand-title">MEDILENS</h1>
+            </div>
+            <p class="hero-copy">Verify medicine identity, compare suitable alternatives, and estimate potential savings.</p>
 
-        <!-- Mode Toggle Tabs -->
-        <div class="flex rounded-xl bg-slate-100 p-1 mb-6">
-            <button onclick="switchMode('single')" id="tabSingle" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white text-blue-600 shadow-sm transition">Single Search</button>
-            <button onclick="switchMode('basket')" id="tabBasket" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition">Basket ⭐</button>
-        </div>
+            <!-- Mode Toggle Tabs -->
+            <div class="tabs">
+                <button onclick="switchMode('single')" id="tabSingle" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white text-blue-600 shadow-sm transition">Single Search</button>
+                <button onclick="switchMode('basket')" id="tabBasket" class="flex-1 py-2 text-xs font-bold rounded-lg text-slate-500 transition">Basket ⭐</button>
+            </div>
+
+            <!-- Medical Disclaimer -->
+            <p class="disclaimer">
+                Disclaimer: For educational transparency only. Always consult a licensed medical practitioner before changing prescribed medicines.
+            </p>
+        </aside>
+
+        <!-- ================= CONTENT PANE ================= -->
+        <main class="pane">
 
         <!-- ================= SINGLE SEARCH VIEW ================= -->
         <div id="viewSingle">
-            <div class="flex gap-2 mb-6">
+            <div class="flex gap-2 mb-5">
                 <input id="searchQuery" type="text" placeholder="Enter medicine brand (e.g., Crocin, Dolo, Omez)"
-                    class="search-input flex-1 px-4 py-3.5 border border-slate-300 rounded-xl text-slate-700 text-sm font-medium">
-                <button onclick="searchMedicine()"
+                    class="search-input flex-1">
+                <button onclick="searchMedicine()" aria-label="Search"
                     class="bg-blue-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/20">
                     🔍
                 </button>
             </div>
 
             <!-- Results Container -->
-            <div id="resultContainer" class="hidden space-y-6">
-                <div class="border-b border-slate-100 pb-4">
-                    <h2 id="resBrandName" class="text-2xl font-bold text-slate-900"></h2>
-                    <div class="mt-3 space-y-1.5 text-sm">
-                        <p class="text-slate-600"><span class="font-semibold text-slate-700">Active ingredient:</span> <span id="resSalt" class="text-slate-900"></span></p>
-                        <p class="text-slate-600"><span class="font-semibold text-slate-700">Strength:</span> <span id="resStrength" class="text-slate-900"></span></p>
-                        <p class="text-slate-600"><span class="font-semibold text-slate-700">Form:</span> <span id="resForm" class="text-slate-900"></span></p>
+            <div id="resultContainer" class="hidden result-grid">
+                <div class="res-a">
+                    <h2 id="resBrandName" class="med-name"></h2>
+                    <div class="spec-list">
+                        <p class="spec"><span class="spec-k">Active ingredient</span> <span id="resSalt" class="spec-v"></span></p>
+                        <p class="spec"><span class="spec-k">Strength</span> <span id="resStrength" class="spec-v"></span></p>
+                        <p class="spec"><span class="spec-k">Form</span> <span id="resForm" class="spec-v"></span></p>
+                    </div>
+                    <div class="alt-line">
+                        <span class="spec-k">Alternative</span>
+                        <span id="resAltBrand" class="alt-name"></span>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 p-4 rounded-xl pricing-box text-center">
-                    <div>
-                        <p class="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Queried Price</p>
-                        <p id="resBrandedPrice" class="text-xl font-extrabold text-slate-700 mt-1">₹0.00</p>
+                <div class="res-b">
+                    <div class="pricing-box">
+                        <div class="price-cell">
+                            <p class="price-label">Queried Price</p>
+                            <p id="resBrandedPrice" class="price-num">₹0.00</p>
+                        </div>
+                        <div class="price-cell alt">
+                            <p class="price-label">Best Alternative</p>
+                            <p id="resAltPrice" class="price-num">₹0.00</p>
+                        </div>
                     </div>
-                    <div>
-                        <p class="text-[11px] text-emerald-600 uppercase tracking-wider font-bold">Best Alternative</p>
-                        <p id="resAltPrice" class="text-xl font-extrabold text-emerald-600 mt-1">₹0.00</p>
-                    </div>
-                </div>
 
-                <div class="text-sm text-slate-500 text-center -mt-2">
-                    Alternative: <span id="resAltBrand" class="font-semibold text-slate-700"></span>
+                    <div class="stat-box">
+                        <div class="stat-row">
+                            <span class="stat-label">Potential difference:</span>
+                            <span id="resDiff" class="stat-val">₹0.00</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Potential savings:</span>
+                            <span id="resSavings" class="stat-val save">0%</span>
+                        </div>
+                        <div class="stat-row divided">
+                            <span class="stat-label">Match confidence:</span>
+                            <span id="resConfidence" class="stat-val brand">0%</span>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <div class="space-y-2.5 text-sm p-4 rounded-xl stat-box">
-                    <div class="flex justify-between">
-                        <span class="text-slate-600 font-medium">Potential difference:</span>
-                        <span id="resDiff" class="font-bold text-slate-800">₹0.00</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-slate-600 font-medium">Potential savings:</span>
-                        <span id="resSavings" class="font-bold text-emerald-600">0%</span>
-                    </div>
-                    <div class="flex justify-between border-t border-blue-200/60 pt-2.5 mt-2.5">
-                        <span class="text-slate-600 font-medium">Match confidence:</span>
-                        <span id="resConfidence" class="font-bold text-blue-600">0%</span>
-                    </div>
-                </div>
+            <!-- Empty state: shown by CSS while results are hidden -->
+            <div class="empty-hint">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M21 21l-5.2-5.2"/></svg>
+                <p>Search a medicine to compare its price with the best alternative.</p>
             </div>
         </div>
 
         <!-- ================= PRESCRIPTION BASKET VIEW ================= -->
-        <div id="viewBasket" class="hidden space-y-4">
-            <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
-                Add medicines from your prescription manually. MediLens verifies the active ingredient, strength and dosage form before showing alternatives.
-            </p>
-            <div class="flex gap-2">
-                <input id="basketQuery" type="text" placeholder="Add prescribed medicine (e.g. Dolo, Crocin, Omez)"
-                    class="search-input flex-1 px-4 py-3 border border-slate-300 rounded-xl text-slate-700 text-sm font-medium">
-                <button onclick="addToBasket()"
-                    class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 text-sm">
-                    + Add
-                </button>
-            </div>
+        <div id="viewBasket" class="hidden">
+            <div class="basket-main">
+                <p class="info-note">
+                    Add medicines from your prescription manually. MediLens verifies the active ingredient, strength and dosage form before showing alternatives.
+                </p>
+                <div class="flex gap-2">
+                    <input id="basketQuery" type="text" placeholder="Add prescribed medicine (e.g. Dolo, Crocin, Omez)"
+                        class="search-input flex-1">
+                    <button onclick="addToBasket()"
+                        class="bg-emerald-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-emerald-700 transition shadow-lg shadow-emerald-600/20 text-sm">
+                        + Add
+                    </button>
+                </div>
 
-            <!-- Basket Items List -->
-            <div id="basketItems" class="space-y-2 max-h-56 overflow-y-auto pr-1">
-                <p class="text-xs text-slate-400 text-center py-6">Your prescription basket is empty. Search and add prescribed medicines above.</p>
+                <!-- Basket Items List -->
+                <div id="basketItems" class="space-y-2 overflow-y-auto pr-1">
+                    <p class="text-xs text-slate-400 text-center py-6">Your prescription basket is empty. Search and add prescribed medicines above.</p>
+                </div>
             </div>
 
             <!-- Basket Summary Totals -->
-            <div id="basketSummary" class="hidden border-t border-slate-200 pt-4 space-y-3">
-                <div class="space-y-2 text-sm p-4 rounded-xl stat-box">
-                    <div class="flex justify-between text-slate-600">
-                        <span>Original total:</span>
-                        <span id="basketOrigTotal" class="font-bold text-slate-800">₹0.00</span>
+            <div id="basketSummary" class="hidden">
+                <div class="stat-box">
+                    <div class="stat-row">
+                        <span class="stat-label">Original total:</span>
+                        <span id="basketOrigTotal" class="stat-val">₹0.00</span>
                     </div>
-                    <div class="flex justify-between text-slate-600">
-                        <span>Alternative total:</span>
-                        <span id="basketAltTotal" class="font-bold text-emerald-600">₹0.00</span>
+                    <div class="stat-row">
+                        <span class="stat-label">Alternative total:</span>
+                        <span id="basketAltTotal" class="stat-val save">₹0.00</span>
                     </div>
-                    <div class="flex justify-between border-t border-blue-200/60 pt-2 mt-1">
-                        <span class="font-semibold text-slate-700">Potential difference:</span>
-                        <span id="basketDiffTotal" class="font-bold text-slate-900">₹0.00</span>
+                    <div class="stat-row divided">
+                        <span class="stat-label">Potential difference:</span>
+                        <span id="basketDiffTotal" class="stat-val">₹0.00</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="font-semibold text-slate-700">Potential savings:</span>
-                        <span id="basketSavingsPct" class="font-bold text-emerald-600">0%</span>
+                    <div class="stat-row">
+                        <span class="stat-label">Potential savings:</span>
+                        <span id="basketSavingsPct" class="stat-val save">0%</span>
                     </div>
                 </div>
             </div>
@@ -123,11 +146,7 @@
             <span id="errorMessage"></span>
         </div>
 
-        <!-- Medical Disclaimer -->
-        <p class="text-[11px] text-slate-400 text-center leading-relaxed italic mt-6">
-            Disclaimer: For educational transparency only. Always consult a licensed medical practitioner before changing prescribed medicines.
-        </p>
-
+        </main>
     </div>
 
     <script>
@@ -193,7 +212,7 @@
                     document.getElementById('errorContainer').classList.add('hidden');
                 }
             } catch (err) {
-                showError("Connection error. Ensure FastAPI is running on port 8000.");
+                showError("Connection error. Ensure FastAPI is running on port 3000.");
             }
         }
 
@@ -202,7 +221,7 @@
             if (!query) return;
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/search', {
+                const response = await fetch('http://127.0.0.1:3000/api/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ brand_name: query })
